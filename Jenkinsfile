@@ -7,6 +7,11 @@ pipeline {
         sh 'mvn cobertura:cobertura test'
       }
     }
+    stage('TEST') {
+      steps {
+        sh 'mvn cobertura:cobertura test'
+      }
+    }
   }
   post {
     always {

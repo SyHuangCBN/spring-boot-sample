@@ -4,93 +4,71 @@ pipeline {
     stage('checkout project') {
       steps {
         checkout scm
+        sh 'docker run -v `pwd`:/app -v $HOME/.m2:/root/.m2 -w /app localhost:5000/maven mvn cobertura:cobertura test'
       }
     }
-    stage('check env') {
+    stage('Report') {
       parallel {
-        stage('check mvn') {
+        stage('Report') {
           steps {
-            sh 'mvn -v'
+            junit 'target/surefire-reports/*.xml'
           }
         }
-        stage('check java') {
-          steps {
-            sh 'java -version'
-          }
-        }
-      }
-    }
-
-    stage('test') {
-      steps {
-        sh 'mvn test cobertura:cobertura'
-      }
-    }      
-    stage('report') {
-      parallel {
-        stage('junit') {
-          steps {
-            junit '**/target/surefire-reports/TEST-*.xml'
-          }
-        }
-        stage('coverage') {
+        stage('Report2') {
           steps {
             cobertura(coberturaReportFile: 'target/site/cobertura/coverage.xml')
           }
         }
       }
     }
-    stage('package') {
+    stage('Package') {
       steps {
-        sh 'mvn package'
+        sh 'docker run -v `pwd`:/app -v  $HOME/.m2:/root/.m2 -w /app -p 8800:8000 localhost:5000/maven mvn package'
       }
     }
-    stage('stage') {
-        input {
-            message "Should we continue?"
-            ok "Yes, we should."
-            submitter "admin"
-            parameters {
-                string(name: 'PERSON', defaultValue: 'Mr Jenkins', description: 'Who should I say hello to?')
-            }
-        }
-        steps {
-            echo "Hello, ${PERSON}, nice to meet you."
-            sh 'make deploy-default'
-        }
-    }
-    stage('preview') {
-        input {
-            message "Should we continue?"
-            ok "Yes, we should."
-            submitter "admin"
-        }
-        steps {
-          echo "every thing is good!"
-        }
-    }    
-    stage('artifact') {
+    stage('Artiche') {
       steps {
-        archiveArtifacts(artifacts: '**/target/*.jar', fingerprint: true)
+        archiveArtifacts 'target/*.jar'
       }
     }
-    stage('deploy') {
+    stage('wait for confirm') {
+      input {
+        message 'Should we deploy?'
+        id 'Yes, we should.'
+        submitter 'admin'
+        parameters {
+          string(name: 'PERSON', defaultValue: 'Mr Jenkins', description: 'Who should I say hello to?')
+        }
+      }
       steps {
-        sh 'make deploy-default'
+        echo "Hello, ${PERSON}, nice to meet you."
+      }
+    }
+    stage('Deploy') {
+      steps {
+        sh '''docker build -t localhost:5000/spring-boot-sample-prod ./
+docker push localhost:5000/spring-boot-sample-prod
+docker pull localhost:5000/spring-boot-sample-prod
+docker run -d -p 8800:8000 localhost:5000/spring-boot-sample-prod
+'''
       }
     }
   }
-  post { 
-    always { 
+  post {
+    always {
       echo 'I will always say Hello again!'
+
     }
-    success { 
+
+    success {
       echo 'success!'
-      // slackSend channel: '#integration', color: 'good', message: "success ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)", teamDomain: 'agileworks-tw', token: 'JhXFKEl6cBFoQ4v52BEJw9Mr'
-    }  
-    failure { 
-      echo 'failure!'
-      // slackSend channel: '#integration', color: 'danger', message: "fail ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)", teamDomain: 'agileworks-tw', token: 'JhXFKEl6cBFoQ4v52BEJw9Mr'
+
     }
-  }    
+
+    failure {
+      echo 'failure!'
+
+    }
+
+  }
 }

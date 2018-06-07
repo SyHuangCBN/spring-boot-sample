@@ -26,6 +26,11 @@ pipeline {
         }
       }
     }
+    stage('package') {
+      steps {
+        archiveArtifacts(artifacts: 'mvn package', allowEmptyArchive: true)
+      }
+    }
   }
   post {
     always {

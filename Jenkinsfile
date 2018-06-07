@@ -16,12 +16,12 @@ pipeline {
       parallel {
         stage('Report') {
           steps {
-            sh 'target/surefire-reports/*.xml'
+            junit 'target/surefire-reports/*.xml'
           }
         }
-        stage('') {
+        stage('Report2') {
           steps {
-            sh 'target/site/cobertura/coverage.xml'
+            cobertura(coberturaReportFile: 'target/site/cobertura/coverage.xml')
           }
         }
       }

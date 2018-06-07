@@ -7,11 +7,6 @@ pipeline {
         sh 'mvn cobertura:cobertura test'
       }
     }
-    stage('TEST') {
-      steps {
-        sh 'mvn cobertura:cobertura test'
-      }
-    }
     stage('Report') {
       parallel {
         stage('Report') {
@@ -26,9 +21,14 @@ pipeline {
         }
       }
     }
-    stage('package') {
+    stage('Package') {
       steps {
-        archiveArtifacts(artifacts: 'mvn package', allowEmptyArchive: true)
+        sh 'mvn package'
+      }
+    }
+    stage('Artiche') {
+      steps {
+        archiveArtifacts 'target/*.jar'
       }
     }
   }
